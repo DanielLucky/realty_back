@@ -14,7 +14,12 @@ class RealtyAPIView(generics.ListAPIView):
     serializer_class = RealtySerializer
 
 
-class RealtyCRUD(generics.RetrieveUpdateDestroyAPIView):
+class RealtyAdd(generics.CreateAPIView):
+    queryset = Realty.objects.all()
+    serializer_class = RealtyCRUDSerializer
+
+
+class RealtyCRUD(generics.RetrieveUpdateDestroyAPIView, generics.CreateAPIView):
     queryset = Realty.objects.all()
     serializer_class = RealtyCRUDSerializer
 

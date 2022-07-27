@@ -18,11 +18,12 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path
 
-from realty.views import RealtyAPIView, RealtyCRUD
+from realty.views import RealtyAPIView, RealtyCRUD, RealtyAdd
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('realty/', RealtyAPIView.as_view()),
+    path('realty', RealtyAPIView.as_view()),
+    path('realty/add', RealtyAdd.as_view()),
     path('realty/<int:pk>', RealtyCRUD.as_view())
 ]
 

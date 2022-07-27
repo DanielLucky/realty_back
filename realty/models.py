@@ -10,6 +10,15 @@ class Realty(models.Model):
         ('rent', 'Аренда'),
         ('sale', 'Продажа')
     ], null=False)  # Тип объявления
+    realty_format = models.CharField(max_length=10, choices=[
+        ('flat', 'Квартира'),
+        ('room', 'Комната'),
+        ('cottages', 'Дома, дачи, коттеджи'),
+        ('land', 'Земельные участки'),
+        ('garages', 'Гаражи и машиноместа'),
+        ('commercial', 'Коммерческая недвижимость')
+    ], null=False)  # Тип недвижимости
+
     price = models.IntegerField(validators=[
         MinValueValidator(0)
     ])  # *Стоимость
@@ -121,17 +130,19 @@ class House(models.Model):
 
 
 def realty_image_directory_path(instance, filename):
-    return 'realty_{0}/{1}'.format(instance.realty_id.id, filename)
+    return 'realty_{0}/{1}'.format(instance.realty.id, filename)
 
 
 class RealtyImage(models.Model):
-    realty_id = models.ForeignKey(Realty, related_name='image', on_delete=models.SET_NULL, unique=False, null=True)
+    realty = models.ForeignKey(Realty, related_name='image', on_delete=models.SET_NULL, unique=False, null=True)
     image = models.ImageField(upload_to=realty_image_directory_path)
+    visible = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ['realty_id']
         ordering = ['image']
+
 
     def __str__(self):
         return str(self.image)
