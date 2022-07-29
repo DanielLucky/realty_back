@@ -1,3 +1,5 @@
 from django.contrib import admin
 
-# Register your models here.
+from realty.models import Realty
+
+admin.site.register(Realty)

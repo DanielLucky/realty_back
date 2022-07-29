@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.contrib.auth.models import User
+from realty_back.settings import AUTH_USER_MODEL as User
 
 
 class Realty(models.Model):
@@ -69,7 +69,7 @@ class Realty(models.Model):
     method_selling = models.ForeignKey('MethodSelling', on_delete=models.PROTECT, null=True)  # Метод продажи
     address = models.ForeignKey('Address', on_delete=models.PROTECT, null=True)  # Адрес TODO: Изменить на проде
 
-    # user = models.ForeignKey(User, on_delete=models.PROTECT, null=True)  #TODO: Изменить на проде
+    user = models.ForeignKey(User, on_delete=models.PROTECT)  #TODO: Изменить на проде
 
     updated_at = models.DateTimeField(auto_now=True)  # Дата обновления
     created_at = models.DateTimeField(auto_now_add=True)  # Дата создания
@@ -130,7 +130,7 @@ class House(models.Model):
 
 
 def realty_image_directory_path(instance, filename):
-    return 'realty_{0}/{1}'.format(instance.realty.id, filename)
+    return 'realty/r_{0}/{1}'.format(instance.realty.id, filename)
 
 
 class RealtyImage(models.Model):

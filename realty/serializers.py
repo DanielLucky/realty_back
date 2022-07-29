@@ -1,6 +1,6 @@
 import PIL
 from django.core.files.uploadedfile import InMemoryUploadedFile
-from rest_framework import serializers
+from rest_framework import serializers, status
 from PIL import Image
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -30,10 +30,15 @@ class ImageUrlField(serializers.ModelSerializer):
 
 
 class RealtySerializer(serializers.ModelSerializer):
-    image = ImageUrlField(many=True, read_only=True)
+    image = serializers.SerializerMethodField('get_image')
     city = serializers.CharField(source='address.city.title')
     street = serializers.CharField(source='address.street.title')
     house = serializers.CharField(source='address.house.title', allow_blank=True)
+
+    def get_image(self, instance):
+        items = RealtyImage.objects.filter(realty=instance, visible=True)
+        serializer = ImageUrlField(instance=items, many=True)
+        return serializer.data
 
     class Meta:
         model = Realty
@@ -48,6 +53,7 @@ class RealtyCRUDSerializer(serializers.ModelSerializer):
     city = serializers.CharField(source='address.city.title')
     street = serializers.CharField(source='address.street.title')
     house = serializers.CharField(source='address.house.title', allow_blank=True)
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     def get_image(self, instance):
         items = RealtyImage.objects.filter(realty=instance, visible=True)
