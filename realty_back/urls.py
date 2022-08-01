@@ -27,7 +27,10 @@ urlpatterns = [
     path('auth/', include('djoser.urls')),
     re_path(r'^auth/', include('djoser.urls.authtoken')),
 
+    path('profile/', include('profiles.urls')),
+
     path('api/v1/', include('realty.urls'))
+
 ]
 
 if settings.DEBUG:

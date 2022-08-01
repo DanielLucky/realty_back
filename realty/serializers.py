@@ -1,26 +1,13 @@
-import PIL
 from django.core.files.uploadedfile import InMemoryUploadedFile
-from rest_framework import serializers, status
-from PIL import Image
+from django.core.validators import MinLengthValidator, MaxLengthValidator
+from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.response import Response
 
 from realty_back import settings
 from .models import *
 
 
-class AddressSerializer(serializers.ModelSerializer):
-    city = serializers.CharField(source='city.title')
-    street = serializers.CharField(source='street.title')
-    house = serializers.CharField(source='house.title', allow_blank=True)
-
-    class Meta:
-        model = Address
-        fields = ['city', 'street', 'house']
-
-
 class ImageUrlField(serializers.ModelSerializer):
-
     class Meta:
         model = RealtyImage
         fields = ['image', ]
@@ -34,6 +21,8 @@ class RealtySerializer(serializers.ModelSerializer):
     city = serializers.CharField(source='address.city.title')
     street = serializers.CharField(source='address.street.title')
     house = serializers.CharField(source='address.house.title', allow_blank=True)
+    is_banned = serializers.BooleanField(read_only=True)
+    is_visible = serializers.BooleanField(read_only=True)
 
     def get_image(self, instance):
         items = RealtyImage.objects.filter(realty=instance, visible=True)
@@ -42,8 +31,8 @@ class RealtySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Realty
-        fields = ['id', 'realty_type', 'price', 'rooms_total',
-                  'area_total', 'floor', 'floor_total', 'city', 'street', 'house', 'image']
+        exclude = ['title', 'description', 'area_kitchen', 'area_living', 'balcony_or_loggia', 'window_type',
+                   'bathroom', 'finishing_type', 'method_selling', 'address', 'updated_at']
 
 
 class RealtyCRUDSerializer(serializers.ModelSerializer):
@@ -54,6 +43,7 @@ class RealtyCRUDSerializer(serializers.ModelSerializer):
     street = serializers.CharField(source='address.street.title')
     house = serializers.CharField(source='address.house.title', allow_blank=True)
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    is_banned = serializers.BooleanField(read_only=True)
 
     def get_image(self, instance):
         items = RealtyImage.objects.filter(realty=instance, visible=True)
@@ -62,7 +52,7 @@ class RealtyCRUDSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Realty
-        exclude = ('address', )
+        exclude = ('address',)
         # fields = '__all__'
 
     def validate(self, attrs: dict):
@@ -157,4 +147,48 @@ class RealtyCRUDSerializer(serializers.ModelSerializer):
             instance.address = address_obj
         instance.save()
 
+        return instance
+
+
+class AddressNewSerializer(serializers.ModelSerializer):
+    city = serializers.CharField(source='city.title', max_length=50)
+    street = serializers.CharField(source='street.title', max_length=50)
+    house = serializers.CharField(source='house.title', max_length=50)
+
+    class Meta:
+        model = Address
+        exclude = ['id', ]
+
+    def save(self, instance, validated_data):
+        city_obj, _ = City.objects.get_or_create(title=validated_data['city'])
+        street_obj, _ = Street.objects.get_or_create(title=validated_data['street'])
+        house_obj, _ = House.objects.get_or_create(title=validated_data['house'])
+        address_obj, _ = Address.objects.get_or_create(city=city_obj, house=house_obj, street=street_obj)
+        return address_obj
+
+
+class RealtyNewSerializer(serializers.ModelSerializer):
+    finishing_type = serializers.CharField(source='finishing_type.title', max_length=50)
+    method_selling = serializers.CharField(source='method_selling.title', max_length=50)
+    address = AddressNewSerializer()
+
+    class Meta:
+        model = Realty
+        exclude = ['is_banned', ]
+
+    def update(self, instance: Realty, validated_data):
+        finishing_type_obj, _ = FinishingType.objects.get_or_create(title=validated_data['finishing_type']['title'])
+        instance.finishing_type = finishing_type_obj
+        method_selling_obj, _ = MethodSelling.objects.get_or_create(title=validated_data['method_selling']['title'])
+        instance.method_selling = method_selling_obj
+
+        address = AddressNewSerializer(data={
+            'city': validated_data['address']['city']['title'],
+            'street': validated_data['address']['street']['title'],
+            'house': validated_data['address']['house']['title']})
+
+        if address.is_valid(raise_exception=True):
+            instance.address = address.save(address, address.data)
+
+        instance.save()
         return instance

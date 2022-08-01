@@ -1,24 +1,25 @@
-from django.core.files.uploadedfile import InMemoryUploadedFile
-from rest_framework import generics, serializers, status, permissions
-from django.shortcuts import render
-from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework import generics, permissions
 
-from .models import Realty, RealtyImage
+from .models import Realty
 from .permissions import IsOwnerOrReadOnly
-from .serializers import RealtySerializer, RealtyCRUDSerializer
-
-
-class Logout(APIView):
-    def get(self):
-        self.request.user.auth_token.delete()
-        return Response(status=status.HTTP_200_OK)
+from .serializers import RealtySerializer, RealtyCRUDSerializer, RealtyNewSerializer
+from .services import PaginationRealtyList
 
 
 class RealtyAPIView(generics.ListAPIView):
-    queryset = Realty.objects.all()
+    queryset = Realty.objects.all().filter(is_banned=False, is_visible=True)
     serializer_class = RealtySerializer
+    pagination_class = PaginationRealtyList
+
+
+class RealtyUser(generics.ListAPIView):
+    serializer_class = RealtySerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
+    pagination_class = PaginationRealtyList
+
+    def get_queryset(self):
+        user = self.request.user
+        return Realty.objects.all().filter(user=user)
 
 
 class RealtyAdd(generics.CreateAPIView):
@@ -33,3 +34,6 @@ class RealtyCRUD(generics.RetrieveUpdateDestroyAPIView, generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
 
+class RealtyNew(generics.RetrieveUpdateAPIView):
+    queryset = Realty.objects.all()
+    serializer_class = RealtyNewSerializer

@@ -65,14 +65,20 @@ class Realty(models.Model):
         ('sep', 'Раздельный')
     ], null=True)  # Санузел
 
-    finishing_type = models.ForeignKey('FinishingType', on_delete=models.PROTECT, null=False)  # Отделка
-    method_selling = models.ForeignKey('MethodSelling', on_delete=models.PROTECT, null=True)  # Метод продажи
-    address = models.ForeignKey('Address', on_delete=models.PROTECT, null=True)  # Адрес TODO: Изменить на проде
+    is_banned = models.BooleanField(default=False)
+    is_visible = models.BooleanField(default=True)
+
+    finishing_type = models.ForeignKey('FinishingType', on_delete=models.PROTECT, null=False, related_name='finishing_type')  # Отделка
+    method_selling = models.ForeignKey('MethodSelling', on_delete=models.PROTECT, null=True, related_name='method_selling')  # Метод продажи
+    address = models.ForeignKey('Address', on_delete=models.PROTECT, null=True, related_name='address')  # Адрес TODO: Изменить на проде
 
     user = models.ForeignKey(User, on_delete=models.PROTECT)  #TODO: Изменить на проде
 
     updated_at = models.DateTimeField(auto_now=True)  # Дата обновления
     created_at = models.DateTimeField(auto_now_add=True)  # Дата создания
+
+    class Meta:
+        ordering = ('-created_at', )
 
     def __str__(self):
         return f'<Realty {self.id, self.title[:10]}>'
@@ -142,7 +148,6 @@ class RealtyImage(models.Model):
     class Meta:
         unique_together = ['realty_id']
         ordering = ['image']
-
 
     def __str__(self):
         return str(self.image)
