@@ -109,6 +109,17 @@ argon2 = ["argon2-cffi (>=19.1.0)"]
 bcrypt = ["bcrypt"]
 
 [[package]]
+name = "django-filter"
+version = "22.1"
+description = "Django-filter is a reusable Django application for allowing users to filter querysets dynamically."
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+Django = ">=3.2"
+
+[[package]]
 name = "django-templated-mail"
 version = "1.1.1"
 description = "Send emails using Django template system."
@@ -399,7 +410,7 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "07f98a32359e11642b919a871c0af756e6b8826ef592eca24d0b07f5578a9d3a"
+content-hash = "6e53b99d132fe74289b77b26bbdeca045e467294b418171f90a83a880d9aad87"
 
 [metadata.files]
 asgiref = []
@@ -479,6 +490,7 @@ coreschema = []
 cryptography = []
 defusedxml = []
 django = []
+django-filter = []
 django-templated-mail = []
 djangorestframework = []
 djangorestframework-simplejwt = []

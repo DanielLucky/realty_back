@@ -1,10 +1,29 @@
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.validators import MinLengthValidator, MaxLengthValidator
 from rest_framework import serializers
+from rest_framework.decorators import api_view
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 
 from realty_back import settings
 from .models import *
+
+
+class AddressNewSerializer(serializers.ModelSerializer):
+    city = serializers.CharField(source='city.title', max_length=50)
+    street = serializers.CharField(source='street.title', max_length=50)
+    house = serializers.CharField(source='house.title', max_length=50)
+
+    class Meta:
+        model = Address
+        exclude = ['id', ]
+
+    def save(self, instance, validated_data):
+        city_obj, _ = City.objects.get_or_create(title=validated_data['city'])
+        street_obj, _ = Street.objects.get_or_create(title=validated_data['street'])
+        house_obj, _ = House.objects.get_or_create(title=validated_data['house'])
+        address_obj, _ = Address.objects.get_or_create(city=city_obj, house=house_obj, street=street_obj)
+        return address_obj
 
 
 class ImageUrlField(serializers.ModelSerializer):
@@ -37,158 +56,98 @@ class RealtySerializer(serializers.ModelSerializer):
 
 class RealtyCRUDSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField('get_image')
-    finishing_type = serializers.CharField(source='finishing_type.title', max_length=50)
-    method_selling = serializers.CharField(source='method_selling.title', max_length=50)
+    finishing_type = serializers.CharField(source='finishing_type.title', max_length=50, required=True)
+    method_selling = serializers.CharField(source='method_selling.title', max_length=50, required=True)
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     city = serializers.CharField(source='address.city.title')
     street = serializers.CharField(source='address.street.title')
     house = serializers.CharField(source='address.house.title', allow_blank=True)
-    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    is_banned = serializers.BooleanField(read_only=True)
-
-    def get_image(self, instance):
-        items = RealtyImage.objects.filter(realty=instance, visible=True)
-        serializer = ImageUrlField(instance=items, many=True)
-        return serializer.data
 
     class Meta:
         model = Realty
-        exclude = ('address',)
-        # fields = '__all__'
+        exclude = ['is_banned', ]
+
+    def get_image(self, instance):
+        items = RealtyImage.objects.filter(realty=instance, visible=True)
+        serializer = ImageUrlField(instance=items, many=True, allow_null=True)
+        return serializer.data
 
     def validate(self, attrs: dict):
         images = []
         valid_formats = ['png', 'jpeg', 'raw', 'jpg', 'tiff', 'psd', 'bmp', 'gif', 'png']
         if not attrs:
             raise ValidationError({'params': 'parameters not passed'})
-
-        if image_list := dict((self.initial_data).lists()).get('image'):
-            for file in image_list:
+        if self.initial_data.get('image'):
+            for file in dict((self.initial_data).lists()).get('image'):
                 if isinstance(file, InMemoryUploadedFile):
                     if not any([True if file.name.lower().endswith(i) else False for i in valid_formats]):
                         raise ValidationError({'image': f'{file.name} is not a valid image format'})
                     images.append(file)
 
         attrs.update({'image': images})
+
+        address = AddressNewSerializer(data={
+            'city': attrs['address']['city']['title'],
+            'street': attrs['address']['street']['title'],
+            'house': attrs['address']['house']['title']})
+        address.is_valid(raise_exception=True)
+        attrs.update({'address': address})
         return attrs
 
     def create(self, validated_data):
         image_data = validated_data.pop('image')
-        finishing_type = validated_data.pop('finishing_type')
-        method_selling = validated_data.pop('method_selling')
-        address = validated_data.pop('address')
 
-        finishing_type_obj, _ = FinishingType.objects.get_or_create(title=finishing_type['title'])
-        method_selling_obj, _ = MethodSelling.objects.get_or_create(title=method_selling['title'])
+        validated_data['finishing_type'], _ = FinishingType.objects.get_or_create(
+            title=validated_data['finishing_type']['title'])
+        validated_data['method_selling'], _ = MethodSelling.objects.get_or_create(
+            title=validated_data['method_selling']['title'])
 
-        city_obj, _ = City.objects.get_or_create(title=address['city']['title'])
-        street_obj, _ = Street.objects.get_or_create(title=address['street']['title'])
-        house_obj, _ = House.objects.get_or_create(title=address['house']['title'])
+        validated_data['address'] = validated_data['address'].save(
+            validated_data['address'],
+            validated_data['address'].data)
 
-        address_obj, _ = Address.objects.get_or_create(city=city_obj, street=street_obj, house=house_obj)
-
-        realty = Realty.objects.create(**validated_data,
-                                       finishing_type=finishing_type_obj,
-                                       method_selling=method_selling_obj,
-                                       address=address_obj)
+        realty_obj = Realty.objects.create(**validated_data)
 
         for image in image_data:
-            RealtyImage.objects.create(realty=realty, image=image)
-        return realty
+            RealtyImage.objects.create(realty=realty_obj, image=image)
+
+        return realty_obj
 
     def update(self, instance: Realty, validated_data):
-        instance.title = validated_data.get('title', instance.title)
-        instance.description = validated_data.get('description', instance.description)
-        instance.realty_type = validated_data.get('realty_type', instance.realty_type)
-        instance.realty_format = validated_data.get('realty_format', instance.realty_format)
-        instance.price = validated_data.get('price', instance.price)
-        instance.rooms_total = validated_data.get('rooms_total', instance.rooms_total)
-        instance.area_total = validated_data.get('area_total', instance.area_total)
-        instance.area_kitchen = validated_data.get('area_kitchen', instance.area_kitchen)
-        instance.area_living = validated_data.get('area_living', instance.area_living)
-        instance.floor = validated_data.get('floor', instance.floor)
-        instance.floor_total = validated_data.get('floor_total', instance.floor_total)
-        instance.balcony_or_loggia = validated_data.get('balcony_or_loggia', instance.balcony_or_loggia)
-        instance.window_type = validated_data.get('window_type', instance.window_type)
-        instance.bathroom = validated_data.get('bathroom', instance.bathroom)
-
         if 'image' in validated_data:
             RealtyImage.objects.filter(realty=instance).update(visible=False)  # Скрытие старых фото
             for image in validated_data.get('image'):
                 RealtyImage.objects.create(realty=instance, image=image)
 
-        if finishing_type_data := validated_data.get('finishing_type'):
-            if finishing_type_data.get('title') != instance.finishing_type.title:
-                finishing_type_obj, _ = FinishingType.objects.get_or_create(title=finishing_type_data['title'])
-                instance.finishing_type = finishing_type_obj
-
-        if method_selling_data := validated_data.get('method_selling'):
-            if method_selling_data.get('title') != instance.method_selling.title:
-                method_selling_obj, _ = MethodSelling.objects.get_or_create(title=method_selling_data['title'])
-                instance.method_selling_data = method_selling_obj
-
-        if address := validated_data.get('address'):
-            address_obj = Address.objects.get(realty=instance)
-            if city_data := address.get('city'):
-                if city_data.get('title') != instance.address.city.title:
-                    city_obj, _ = City.objects.get_or_create(title=city_data['title'])
-                    address_obj.city = city_obj
-
-            if street_data := address.get('street'):
-                if street_data.get('title') != instance.address.street.title:
-                    street_obj, _ = Street.objects.get_or_create(title=street_data['title'])
-                    address_obj.street = street_obj
-
-            if house_data := address.get('house'):
-                if house_data.get('title') != instance.address.house.title:
-                    house_obj, _ = House.objects.get_or_create(title=house_data['title'])
-                    address_obj.house = house_obj
-            address_obj.save()
-
-            instance.address = address_obj
-        instance.save()
-
-        return instance
-
-
-class AddressNewSerializer(serializers.ModelSerializer):
-    city = serializers.CharField(source='city.title', max_length=50)
-    street = serializers.CharField(source='street.title', max_length=50)
-    house = serializers.CharField(source='house.title', max_length=50)
-
-    class Meta:
-        model = Address
-        exclude = ['id', ]
-
-    def save(self, instance, validated_data):
-        city_obj, _ = City.objects.get_or_create(title=validated_data['city'])
-        street_obj, _ = Street.objects.get_or_create(title=validated_data['street'])
-        house_obj, _ = House.objects.get_or_create(title=validated_data['house'])
-        address_obj, _ = Address.objects.get_or_create(city=city_obj, house=house_obj, street=street_obj)
-        return address_obj
-
-
-class RealtyNewSerializer(serializers.ModelSerializer):
-    finishing_type = serializers.CharField(source='finishing_type.title', max_length=50)
-    method_selling = serializers.CharField(source='method_selling.title', max_length=50)
-    address = AddressNewSerializer()
-
-    class Meta:
-        model = Realty
-        exclude = ['is_banned', ]
-
-    def update(self, instance: Realty, validated_data):
         finishing_type_obj, _ = FinishingType.objects.get_or_create(title=validated_data['finishing_type']['title'])
-        instance.finishing_type = finishing_type_obj
+        validated_data['finishing_type'] = finishing_type_obj
         method_selling_obj, _ = MethodSelling.objects.get_or_create(title=validated_data['method_selling']['title'])
-        instance.method_selling = method_selling_obj
+        validated_data['method_selling'] = method_selling_obj
 
-        address = AddressNewSerializer(data={
-            'city': validated_data['address']['city']['title'],
-            'street': validated_data['address']['street']['title'],
-            'house': validated_data['address']['house']['title']})
+        validated_data['address'] = validated_data['address'].save(
+            validated_data['address'],
+            validated_data['address'].data)
 
-        if address.is_valid(raise_exception=True):
-            instance.address = address.save(address, address.data)
+        del validated_data['image']
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
 
         instance.save()
+
         return instance
+
+
+class RealtyCitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = City
+        exclude = ['created_at', ]
+
+
+@api_view(['GET'])
+def realty_search(request):
+    """
+    Поиск недвижимости
+    :param request:
+    :return:
+    """
+    return Response({"message": "Hello for today! See you tomorrow!"})
