@@ -13,6 +13,17 @@ services:
 
     command: bash -c "python manage.py makemigrations; python manage.py migrate; python manage.py runserver 0.0.0.0:8080"
 
+  prod_realty-sell:
+    build: .
+    environment:
+      - MODE_PROJECT=PROD
+    volumes:
+      - .:/app
+    ports:
+      - "8888:8080"
+
+    command: bash -c "python manage.py makemigrations; python manage.py migrate; python manage.py runserver 0.0.0.0:8080"
+
 
 networks:
   default:
