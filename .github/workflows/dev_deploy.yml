@@ -36,4 +36,4 @@ jobs:
         echo "${{ secrets.KEY_DL_HOME }}" > "$HOME/.ssh/key"
         chmod 600 "$HOME/.ssh/key"
         rsync -e "ssh -i $HOME/.ssh/key -o StrictHostKeyChecking=no" --archive --compress --delete . root@194.87.238.222:/home/dev/projects/realty_sell/develop/
-        ssh root@194.87.238.222 'docker-compose up'
+        
