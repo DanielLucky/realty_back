@@ -11,6 +11,18 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+MODE_PROJECT = 'DEV'
+
+if os.getenv('MODE_PROJECT') == 'DEV':
+    MODE_PROJECT = 'DEV'
+elif os.getenv('MODE_PROJECT') == 'PROD':
+    MODE_PROJECT = 'PROD'
+elif os.getenv('MODE_PROJECT') == 'LOCAL':
+    MODE_PROJECT = 'LOCAL'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,13 +32,33 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-+u3sxy-$g9g+k9x!@1cnu54%-pi^9$%vfe+ckh189lrtqq*axr'
+SECRET_KEY = os.getenv(MODE_PROJECT+'_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
+if MODE_PROJECT == 'LOCAL':
+    DEBUG = True
 
 ALLOWED_HOSTS = []
 
+CORS_ALLOWED_ORIGINS = [
+    "https://example.com",
+    "https://sub.example.com",
+    "http://localhost:8080",
+    "http://127.0.0.1:9000",
+]
+
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
+
+AUTH_USER_MODEL = 'users.User'
+AUTHENTICATION_BACKENDS = ('users.backends.AuthBackend',)
 
 # Application definition
 
@@ -38,7 +70,15 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'realty.apps.RealtyConfig',
-    'rest_framework'
+    'users.apps.UsersConfig',
+    'profiles.apps.ProfilesConfig',
+    'rest_framework',
+    'welcome',
+    'rest_framework.authtoken',
+    'djoser',
+    'django_filters',
+    "corsheaders",
+
 ]
 
 MIDDLEWARE = [
@@ -49,6 +89,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
 ]
 
 ROOT_URLCONF = 'realty_back.urls'
@@ -79,10 +121,10 @@ WSGI_APPLICATION = 'realty_back.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'django_db',
-        'USER': 'user',
-        'PASSWORD': 'password',
-        'HOST': '127.0.0.1',
+        'NAME': os.getenv(MODE_PROJECT+'_DB_NAME'),
+        'USER': os.getenv(MODE_PROJECT+'_DB_USER'),
+        'PASSWORD': os.getenv(MODE_PROJECT+'_DB_PASSWORD'),
+        'HOST': os.getenv(MODE_PROJECT+'_DB_HOST'),
         'PORT': '5432',
     }
 }
@@ -106,6 +148,15 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+DJOSER = {
+    'USER_CREATE_PASSWORD_RETYPE': True,
+    'PASSWORD_RESET_CONFIRM_URL': 'reset_password_confirm/{uid}/{token}',
+    'SEND_ACTIVATION_EMAIL': True,
+    'SET_PASSWORD_RETYPE': True,
+    'PASSWORD_RESET_CONFIRM_RETYPE': True,
+    # 'TOKEN_MODEL': True,
+    'ACTIVATION_URL': 'auth/verify/{uid}/{token}/',
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
@@ -131,3 +182,23 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': (
+            'rest_framework.renderers.JSONRenderer',
+            # 'rest_framework.renderers.BrowsableAPIRenderer',
+        ),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+    ),
+}
+
+EMAIL_HOST = 'smtp.yandex.ru'
+EMAIL_PORT = 465
+EMAIL_HOST_USER = "mescheryakoffdan@yandex.ru"
+EMAIL_HOST_PASSWORD = "Daniellucky153"
+EMAIL_USE_TLS = False
+EMAIL_USE_SSL = True
+
+SERVER_EMAIL = EMAIL_HOST_USER
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

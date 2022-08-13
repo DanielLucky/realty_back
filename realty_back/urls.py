@@ -24,6 +24,8 @@ from realty.views import RealtyAPIView, RealtyCRUD, RealtyAdd
 urlpatterns = [
     path('admin/', admin.site.urls),
 
+    path('', include('welcome.urls')),
+
     path('auth/', include('djoser.urls')),
     re_path(r'^auth/', include('djoser.urls.authtoken')),
 
