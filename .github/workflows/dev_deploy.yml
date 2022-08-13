@@ -35,5 +35,5 @@ jobs:
         mkdir "$HOME/.ssh"
         echo "${{ secrets.KEY_DL_HOME }}" > "$HOME/.ssh/key"
         chmod 600 "$HOME/.ssh/key"
-        rsync -e "ssh -i $HOME/.ssh/key -o StrictHostKeyChecking=no" --archive --compress . root@194.87.238.222:/home/dev/projects/realty_sell/develop/
-        ssh -i ~/.ssh/key root@194.87.238.222 'cd /home/dev/projects/realty_sell/develop; docker-compose down; docker-compose up --build --force-recreate -d'
+        rsync -e "ssh -i $HOME/.ssh/key -o StrictHostKeyChecking=no" --archive --compress . ${{secrets.USER_IP}}:${{secrets.PATH_DEV}}
+        ssh -i ~/.ssh/key ${{secrets.USER_IP}} 'cd ${{secrets.PATH_DEV}}; docker-compose down; docker-compose up --build --force-recreate -d dev_realty-sell'
