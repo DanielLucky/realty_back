@@ -7,4 +7,4 @@ from rest_framework.response import Response
 
 @api_view(['GET'])
 def welcome(request):
-    return Response({'title': 'Welcome to RealtySellDEVELOP. Please check Documentation `https://documenter.getpostman.com/view/17461733/UzkS3HZz`'}, status=200)
+    return Response({'title': 'Welcome to RealtySellDEV. Please check Documentation `https://documenter.getpostman.com/view/17461733/UzkS3HZz`'}, status=200)
