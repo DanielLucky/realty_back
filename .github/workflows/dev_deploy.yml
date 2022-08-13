@@ -33,7 +33,7 @@ jobs:
       run: |
         set -eu
         mkdir "$HOME/.ssh"
-        echo "${{ secret.KEY_DL_HOME }}" > "$HOME/.ssh/key"
+        echo "${{ secrets.KEY_DL_HOME }}" > "$HOME/.ssh/key"
         chmod 600 "$HOME/.ssh/key"
         rsync -e "ssh -i $HOME/.ssh/key -o StrictHostKeyCheking=no" --archive --compress --delete . root@realty-sell.ru:/home/dev/projects/realty_sell/develop/
       
