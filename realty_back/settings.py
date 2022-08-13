@@ -38,8 +38,9 @@ SECRET_KEY = os.getenv(MODE_PROJECT+'_SECRET_KEY')
 DEBUG = False
 if MODE_PROJECT == 'LOCAL':
     DEBUG = True
-
-ALLOWED_HOSTS = []
+    ALLOWED_HOSTS = []
+else:
+    ALLOWED_HOSTS = ['*']
 
 CORS_ALLOWED_ORIGINS = [
     "https://example.com",
